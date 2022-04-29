@@ -16,12 +16,26 @@ const client = new MongoClient(uri, {
   useUnifiedTopology: true,
   serverApi: ServerApiVersion.v1,
 });
-client.connect((err) => {
-  const collection = client.db("test").collection("devices");
-  console.log('db connected');
-  // perform actions on the collection object
-  client.close();
-});
+console.log(uri);
+//heroku link https://enigmatic-beach-29740.herokuapp.com/
+
+async function run() {
+  try {
+    await client.connect();
+    const productsCollection = client.db("warehouse").collection("products");
+    
+    app.get('/products',async(req,res)=>{
+      const query={}
+      const cursor=productsCollection.find(query)
+      const result=await cursor.toArray()
+      res.send(result)
+    })
+    
+  } finally {
+    // await client.close();
+  }
+}
+run().catch(console.dir);
 
 
 app.get('/',(req,res)=>{
