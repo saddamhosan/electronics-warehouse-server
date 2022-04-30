@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const app = express();
@@ -8,6 +9,21 @@ const port = process.env.PORT || 4000;
 //middleware
 app.use(cors());
 app.use(express.json());
+
+const verifyJWT=(req,res,next)=>{
+const authHeader = req.headers.authorization;
+if (!authHeader) {
+  return res.status(401).send({ message: "unauthorized access" });
+}
+const token=authHeader.split(' ')[1]
+jwt.verify(token, process.env.ACCESS_TOKEN,(err,decoded)=>{
+  if(err){
+    return res.status(403).send({message:'forbidden access'})
+  }
+  req.decoded=decoded
+  next()
+});
+}
 
 const res = require("express/lib/response");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.arfbr.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`;
@@ -23,6 +39,15 @@ async function run() {
     await client.connect();
     const productsCollection = client.db("warehouse").collection("products");
 
+    //token
+    app.post('/login',async(req,res)=>{
+      const user=req.body
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN,{
+        expiresIn:'2d'
+      });
+      res.send({token})
+    })
+
     app.get("/products", async (req, res) => {
       const query = {};
       const cursor = productsCollection.find(query);
@@ -30,12 +55,18 @@ async function run() {
       res.send(result);
     });
 
-    app.get('/items',async(req,res)=>{
+    app.get('/items',verifyJWT, async(req,res)=>{
+      const decodedEmail=req.decoded.email 
       const email=req.query.email
-      const query={email}
-      const cursor=productsCollection.find(query)
-      const result=await cursor.toArray()
-      res.send(result)
+      if(email===decodedEmail){
+        const query = { email };
+        const cursor = productsCollection.find(query);
+        const result = await cursor.toArray();
+        res.send(result);
+      }else{
+       res.status(403).send({ message: "forbidden access" });
+      }
+      
     })
 
     app.get("/product/:id", async (req, res) => {
@@ -47,7 +78,6 @@ async function run() {
 
     app.post('/product',async(req,res)=>{
       const newItem=req.body
-      console.log(newItem);
       const result = await productsCollection.insertOne(newItem);
       res.send(result)
     })
