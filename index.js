@@ -32,7 +32,6 @@ const client = new MongoClient(uri, {
   useUnifiedTopology: true,
   serverApi: ServerApiVersion.v1,
 });
-//heroku link https://enigmatic-beach-29740.herokuapp.com/
 
 async function run() {
   try {
@@ -49,10 +48,13 @@ async function run() {
     })
 
     app.get("/products", async (req, res) => {
+      const limit=parseInt(req.query.limit)
+      const page=parseInt(req.query.page)
+      const count=await productsCollection.estimatedDocumentCount()
       const query = {};
       const cursor = productsCollection.find(query);
-      const result = await cursor.toArray();
-      res.send(result);
+      const result = await cursor.skip(limit*page).limit(limit).toArray();
+    res.send({result,count});
     });
 
     app.get('/items',verifyJWT, async(req,res)=>{
