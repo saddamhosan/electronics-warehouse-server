@@ -10,6 +10,7 @@ const port = process.env.PORT || 4000;
 app.use(cors());
 app.use(express.json());
 
+//verify jwt
 const verifyJWT=(req,res,next)=>{
 const authHeader = req.headers.authorization;
 if (!authHeader) {
@@ -46,7 +47,8 @@ async function run() {
       });
       res.send({token})
     })
-
+     
+    //get all products with pagination
     app.get("/products", async (req, res) => {
       const limit=parseInt(req.query.limit)
       const page=parseInt(req.query.page)
@@ -57,6 +59,7 @@ async function run() {
     res.send({result,count});
     });
 
+    //get api for my items with query email and verify jwt
     app.get('/items',verifyJWT, async(req,res)=>{
       const decodedEmail=req.decoded.email 
       const email=req.query.email
@@ -71,6 +74,7 @@ async function run() {
       
     })
 
+    //get a single product using id
     app.get("/product/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
@@ -78,12 +82,14 @@ async function run() {
       res.send(result);
     });
 
+    //post api added a single product in mongodb  
     app.post('/product',async(req,res)=>{
       const newItem=req.body
       const result = await productsCollection.insertOne(newItem);
       res.send(result)
     })
 
+    //update api for delivered and add quantity
     app.put("/product/:id", async (req, res) => {
       const id = req.params.id;
       const quantity = parseInt(req.body.newQuantity);
@@ -100,6 +106,7 @@ async function run() {
       res.send(result);
     });
 
+    //delete api for delete product
     app.delete('/product/:id',async(req,res)=>{
       const id=req.params.id
       const query={_id:ObjectId(id)}
